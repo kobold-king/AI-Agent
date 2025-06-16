@@ -4,3 +4,4 @@ Boot.dev guided project. A LLM-powered command-line program capable of reading, 
 # Notes:
 
 source venv/bin/activate
+calculator addded
