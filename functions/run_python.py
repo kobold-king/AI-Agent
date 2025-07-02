@@ -1,5 +1,22 @@
 import os
 import subprocess
+from google.genai import types
+
+# This tells the LLM how to use the function
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file",
+    description="Execute Python files with optional arguments, constrained to the working directory.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="The file path to run the python file from, relative to the working directory.",
+            ),
+        },
+        required=["file_path"],
+    ),
+)
 
 def run_python_file(working_directory, file_path):
     abs_working_directory = os.path.abspath(working_directory)
