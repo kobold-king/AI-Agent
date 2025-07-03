@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 
 from dotenv import load_dotenv
 from google import genai
@@ -40,6 +41,12 @@ def main():
     messages = [
         types.Content(role="user", parts=[types.Part(text=prompt)]),
     ]
+    operators = ['+', '-', '*', '/', '%', '^']
+    script_command = ["python", "calculator/main.py", prompt]
+    for op in prompt:
+        if op in operators:
+            result = subprocess.run(script_command, capture_output=True, text=True)
+            print(result.stdout)
 
     iters = 0
     while True:
