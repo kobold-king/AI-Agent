@@ -1,12 +1,11 @@
 import os
 import sys
+
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from functions.get_files_info import schema_get_files_info
-from functions.get_file_content import schema_get_file_content
-from functions.run_python import schema_run_python_file
-from functions.write_file import schema_write_file
+
+from functions.call_function import call_function, available_functions
 
 def main():
 # Load environment variables from a .env file
@@ -37,16 +36,9 @@ def main():
         types.Content(role="user", parts=[types.Part(text=prompt)]),
     ]
 
-    # List of available functions we have made declarations/schema for
-    available_functions = types.Tool(
-        function_declarations=[
-            schema_get_files_info, schema_get_file_content, schema_run_python_file,  schema_write_file,
-        ]
-)
     generate_content(client, messages, verbose, available_functions)
 
 
-    # Get a response from the model
 def generate_content(client, messages, verbose, available_functions):
     # Define the model and prompt
     model_name = "gemini-2.0-flash-001"
@@ -82,15 +74,25 @@ def generate_content(client, messages, verbose, available_functions):
     if not response.function_calls:
         return response.text
 
+    # For storing multiple responses
+    function_responses = []
     for function_call_part in response.function_calls:
-        print(f"Calling function: {function_call_part.name}({function_call_part.args})")
+        function_call_result = call_function(function_call_part, verbose)
+        if (
+            not function_call_result.parts
+            or not function_call_result.parts[0].function_response
+        ):
+            raise Exception("empty function call result")
+        if verbose:
+            print(f"-> {function_call_result.parts[0].function_response.response}")
+        function_responses.append(function_call_result.parts[0])
+        #nowhere it talks about appending multiple responses to a list
+    if not function_responses:
+        raise Exception("no function responses generated, exiting.")
 
-    # Old Harder to read code
-    # if response.candidates[0].content.parts[0].function_call:
-    #     function_call_part = response.candidates[0].content.parts[0].function_call
-    #     print(f"Calling function: {function_call_part.name}({function_call_part.args})")
-    # else:
-    #     print(response.text)
+
+
+
 
 if __name__ == "__main__":
     main()
