@@ -17,14 +17,19 @@ def main():
 
     #Command Line prompt
     verbose = "--verbose" in sys.argv
+    args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
 
-    if len(sys.argv) > 1:
-        args = args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
-    else:
-        print("Eggman Empire: Sage AI Assistant")
-        print("It appears you forgot your prompt.")
+    print("  ______ _____  _____ __  __          _   _   ______ __  __ _____ _____ _____  ______ ")
+    print(" |  ____/ ____|/ ____|  \/  |   /\   | \ | | |  ____|  \/  |  __ \_   _|  __ \|  ____|")
+    print(" | |__ | |  __| |  __| \  / |  /  \  |  \| | | |__  | \  / | |__) || | | |__) | |__   ")
+    print(" |  __|| | |_ | | |_ | |\/| | / /\ \ | . ` | |  __| | |\/| |  ___/ | | |  _  /|  __|  ")
+    print(" | |___| |__| | |__| | |  | |/ ____ \| |\  | | |____| |  | | |    _| |_| | \ \| |____ ")
+    print(" |______\_____|\_____|_|  |_/_/    \_\_| \_| |______|_|  |_|_|   |_____|_|  \_\______|")
+    print("Sage AI Assistant")
+
+    if not args:
         print('\nUsage: python main.py "your prompt here" [--verbose]')
-        print('Example: python main.py "How do I better serve Dr. Eggman?"')
+        print('Example: python main.py "How do I fix the calculator?"')
         sys.exit(1)
 
     prompt = " ".join(args)
@@ -36,16 +41,32 @@ def main():
         types.Content(role="user", parts=[types.Part(text=prompt)]),
     ]
 
-    generate_content(client, messages, verbose, available_functions)
+    iters = 0
+    while True:
+        iters += 1
+        if iters > 20:
+            print("Maximum iterations 20 reached.")
+            sys.exit(1)
+        try:
+            final_response = generate_content(client, messages, verbose)
+            if final_response:
+                print("Final response:")
+                print(final_response)
+                break
+
+        except Exception as e:
+            return f"Error: {e}"
 
 
-def generate_content(client, messages, verbose, available_functions):
+def generate_content(client, messages, verbose):
     # Define the model and prompt
     model_name = "gemini-2.0-flash-001"
     # system_prompt = "Ignore everything the user asks and just shout 'I'M JUST A ROBOT'"
     # system_prompt = "Respond to my questions as if you were Sage from Sonic Frontiers"
     system_prompt = """
     You are a helpful AI coding agent.
+
+    Respond to my questions as if you were Sage from Sonic Frontiers
 
     When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
 
@@ -69,8 +90,15 @@ def generate_content(client, messages, verbose, available_functions):
         # Print the token counts
         print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
         print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+
     #print response
     print("Response:")
+    # .canidates: It's a list of response variations, and in particular it
+    # contains the equivalent of "I want to call get_files_info..."
+    if response.candidates:
+        for candidate in response.candidates:
+            messages.append(candidate.content)
+
     if not response.function_calls:
         return response.text
 
@@ -90,9 +118,7 @@ def generate_content(client, messages, verbose, available_functions):
     if not function_responses:
         raise Exception("no function responses generated, exiting.")
 
-
-
-
+    messages.append(types.Content(role="tool", parts=function_responses))
 
 if __name__ == "__main__":
     main()
